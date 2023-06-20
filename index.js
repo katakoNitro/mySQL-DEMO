@@ -89,7 +89,7 @@ async function main() {
     // triggered when: after the user has logged in and they visit another route
     passport.deserializeUser(async function(id, done){
         const [user] = await db.query("SELECT * FROM users WHERE id = ?", [id]);
-        done(null, user[0]);
+        done(null, user[0]);  // <-- save the identifyig information (2nd arugment) into the session
     })
 
     // setup the routes
@@ -213,6 +213,7 @@ async function main() {
                 return res.redirect('/login');
             }
             // login function is provided by passport
+            // if successful, triggers serializeUser
             req.login(user, (err)=>{
                 if (err) {
                     return next(err);
