@@ -141,6 +141,35 @@ async function main() {
           })
     })
 
+    app.put('/api/artists/:artist_id', express.json(), async function(req,res){
+        const {artist_id} = req.params;
+          // assume that the client is going to replace all the fields in the row
+          const {name, birth_year, country, preferred_medium} = req.body;
+          const sql = "UPDATE artists SET name=?, birth_year=?, country=?, preferred_medium=? WHERE id = ?";
+          await db.query(sql, [name, birth_year, country, preferred_medium, artist_id]);
+          res.json({
+            'message':"Artist has been updated"
+          });
+        
+    });
+
+    app.delete('/api/artists/:artist_id', express.json(), async function(req,res){
+        try {
+            const {artist_id} = req.params;
+            const sql = "DELETE FROM artists WHERE id = ?";
+            await db.query(sql, [artist_id]);
+            res.json({
+                'message':"Artist has been deleted"
+            });
+        } catch (e) {
+            console.log("Error =>", e);
+            res.status(500).json({
+                "message":"Error while deleting artist"
+            })
+        }
+  
+    })
+
     // setup the routes
     app.get('/', async function (req, res) {
         try {
