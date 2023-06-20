@@ -57,8 +57,24 @@ async function main() {
             res.status(500);  // allows us to send back the response with a HTTP code
             res.send('Internal Server Error');
         }
+    })
 
+    // render a form that allow us to add in a new artist
+    app.get('/artists/create', function(req,res){
+        res.render('create_artist');
+    })
 
+    app.post('/artists/create', async function(req,res){
+        // extract out the values of the fields
+        const {name, birth_year,country} = req.body;
+
+        // write the query
+        const sql = `INSERT INTO artists (name, birth_year, country) 
+                       VALUES (?,?,?)`;
+
+        // execute the query on the database
+        await db.query(sql, [name, birth_year, country]);
+        res.redirect('/');
     })
 }
 
