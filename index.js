@@ -2,10 +2,7 @@ const express = require('express');
 const ejs = require('ejs');
 const dotenv = require('dotenv').config();
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcrypt');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+
 
 const app = express();
 
@@ -17,19 +14,6 @@ app.use(express.urlencoded({
     extended: false
 }));
 
-// setup the session
-// the `session` function is available thru the session package
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: true
-}))
-
-// initialize passport
-// Because passport requres session to be enabled,
-// make sure to initialize passport after initialize the sessions
-app.use(passport.initialize());
-app.use(passport.session());
 
 
 
@@ -56,41 +40,7 @@ async function main() {
     // setup strategy and serialize users and deserialize users
     // the strategy is to check if the user name and password is correct
     // when is triggered: when user logins
-    passport.use(new LocalStrategy(async function(username, password, done){
-        // implement the logic to check if the provided username and password are valid
-        const sql = 'SELECT * FROM users WHERE username = ?';
-        const [user] = await db.query(sql, [username]);
-        // if the user with the provided username does not exist, then it
-        // means the username is invalid
-        if (user.length == 0) {
-            return done(null, false, {message:"Incorrect username"});
-        }
-
-        // compare the password 
-        // bcrypt.compare can check whether a plain text string is the same
-        // as a hashed string
-        const match = await bcrypt.compare(password, user[0].password);
-        if (!match) {
-            // password does not match
-            return done(null, false, {message:"Incorrect password"});
-        }
-        return done(null, user[0]);  // the second argument will contain the actual user object
-    }));
-
-    // serialize: store identiying information about the user when they log in
-    // is trigger: when a user logins successful
-
-    passport.serializeUser(function(user, done){
-        done(null, user.id); // when done() is called will save the identifying
-                            // information (the second argument) into the session
-    })
-
-    // deserialize: given an identifying information, get the user 
-    // triggered when: after the user has logged in and they visit another route
-    passport.deserializeUser(async function(id, done){
-        const [user] = await db.query("SELECT * FROM users WHERE id = ?", [id]);
-        done(null, user[0]);  // <-- save the identifyig information (2nd arugment) into the session
-    })
+  
 
     // setup the routes
     app.get('/', async function (req, res) {
@@ -192,37 +142,7 @@ async function main() {
         res.redirect('/login');
      })
 
-     app.get('/login', function(req,res){
-        res.render('login')
-     })
 
-     app.post('/login', function(req, res, next){
-        // start the entire flow of
-        // 1. triggering the localstrategy (test if username and password is valid)
-        // 2. localstrategy if on successful login -> serializeUser
-        //
-        // passport.authenticate has two arugments
-        // 1. first arugment: which strategy to authenticate
-        // 2. second argument: a callback function that is invoked on a successful
-        // or failure to login
-        passport.authenticate('local', function(err, user, info){
-            if (err) {
-                return next(err);
-            }
-            if (!user) {
-                return res.redirect('/login');
-            }
-            // login function is provided by passport
-            // if successful, triggers serializeUser
-            req.login(user, (err)=>{
-                if (err) {
-                    return next(err);
-                }
-                return res.redirect('/');
-            })
-
-        })(req, res, next);
-     })
 }
 
 main();
