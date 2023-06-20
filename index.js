@@ -90,6 +90,16 @@ async function main() {
             artist
         })
     })
+
+    app.post('/artists/:artist_id/update', async function(req,res){
+        const { name, birth_year, country, preferred_medium} = req.body;
+        const { artist_id } = req.params;
+        const sql = `UPDATE artists SET name=?, birth_year=?, country=?, preferred_medium=?
+                     WHERE id = ?
+        `
+        await db.query(sql, [name, birth_year, country, preferred_medium, artist_id]);
+        res.redirect('/');
+    })
 }
 
 main();
