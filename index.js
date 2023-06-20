@@ -7,6 +7,9 @@ const session = require('express-session');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const JwtStrategy = require('passport-jwt').Strategy;
 
 const app = express();
 
@@ -69,6 +72,13 @@ const dbConfig = {
     database: process.env.DB_DATABASE
 }
 
+// setup JWT for passport
+const jwtOptions = {
+    // Authentication Header: Bearer <token>
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: process.env.JWT_SECRET
+}
+
 async function main() {
     // mysql.createConnection is an asynchronous function
     // 1. it takes a long time to finish
@@ -103,6 +113,17 @@ async function main() {
         return done(null, user[0]);  // the second argument will contain the actual user object
     }));
 
+
+    // setup the JWT strategy (is used to validate if a JWT is valid when the user access a protected route)
+    passport.use(new JwtStrategy(jwtOptions, async function(jwt_payload,done){
+        const [user] = await db.query("SELECT * FROM users WHERE id = ?", [jwt_payload.id]);
+        if (user.length > 0 ) {
+            return done(null, user[0]);
+        } else {
+            return done(null, false); // false meant no user found
+        }
+    }))
+
     // serialize: store identiying information about the user when they log in
     // is trigger: when a user logins successful
 
@@ -125,7 +146,7 @@ async function main() {
     });
 
     // express.json middleware basically means we want to extract data from JSON payload
-    app.post('/api/artists', express.json(), async function(req,res){
+    app.post('/api/artists', passport.authenticate('jwt', {session:false}), express.json(), async function(req,res){
         // assume the request will contain artist name, the country, date of birth and prefered medium
           // extract out the values of the fields
           const {name, birth_year,country, preferred_medium} = req.body;
@@ -329,7 +350,37 @@ async function main() {
         res.render('profile', {
             user
         })
-     })
+     });
+
+     app.post('/api/login', express.json(), function(req,res,next) {
+
+            const callbackFunction = function(err, user, info) {
+                if (err) {
+                    return next(err);
+                }
+                if (!user) {
+                    return res.status(401).json({
+                        "message":"Invalid login"
+                    })
+                }
+                const token = jwt.sign({
+                    "id": user.id},
+                 process.env.JWT_SECRET,
+                    { 
+                        expiresIn:"1h"
+                    }
+                );
+                return res.json({
+
+                    token: token
+                })
+            }
+
+            passport.authenticate('local', {
+                session:false
+            }, callbackFunction)(req,res,next)
+
+     });
 }
 
 main();
