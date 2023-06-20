@@ -15,6 +15,7 @@
                 <th>Name</th>
                 <th>Birth Year</th>
                 <th>Country</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -29,6 +30,10 @@
                     </td>
                     <td>
                         <%= artist.country %>
+                    </td>
+                    <td>
+                        <a href="/artists/<%= artist.id %>/update">Update</a>
+                        <a href="/artists/<%= artist.id %>/delete">Delete</a>
                     </td>
                 </tr>
                 <% } %>

@@ -99,7 +99,25 @@ async function main() {
         `
         await db.query(sql, [name, birth_year, country, preferred_medium, artist_id]);
         res.redirect('/');
-    })
+    });
+
+    app.get('/artists/:artist_id/delete', async function(req,res){
+        const {artist_id} = req.params;
+        const sql = "SELECT * FROM artists WHERE id = ?";
+        // whenever we do a SELECT we always have an array
+        const [artists] = await db.query(sql, [artist_id]);
+        const artist = artists[0];
+        res.render('confirm_delete', {
+            artist
+        })
+     })
+
+     app.post('/artists/:artist_id/delete', async function(req,res){
+        const {artist_id} = req.params;
+        const sql = "DELETE FROM artists WHERE id = ?";
+        await db.query(sql, [artist_id]);
+        res.redirect('/');
+     })
 }
 
 main();
