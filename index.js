@@ -76,6 +76,20 @@ async function main() {
         await db.query(sql, [name, birth_year, country]);
         res.redirect('/');
     })
+
+    // all the following URLs will match the following route path
+    // /artists/123/update  (req.params.artist_id => 123)
+    app.get('/artists/:artist_id/update', async function(req,res){
+        const {artist_id} = req.params;
+        const sql = "SELECT * FROM artists WHERE id=?";
+        // query using mysql2 we always get back an array
+        const [artists] = await db.query(sql, [artist_id]);
+        // to get the artist we want to update, we retrieve from index 0
+        const artist = artists[0];
+        res.render('update_artist', {
+            artist
+        })
+    })
 }
 
 main();
