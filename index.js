@@ -36,6 +36,18 @@ app.use(passport.session());
 // set the view engine
 app.set('view engine', 'ejs');
 
+// a middleware is a function that accepts three arguments
+// req, res, next
+function ensureAuthenticated(req, res, next) {
+    // isAuthenticated is added when we do app.use(passport.initialize())
+    if (req.isAuthenticated()) {
+        return next(); // go on to the middleware
+    }
+    // if user is not authenticated, we'll go back to the login route
+    res.redirect('/login');
+}
+
+
 const dbConfig = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -205,7 +217,8 @@ async function main() {
         // 1. first arugment: which strategy to authenticate
         // 2. second argument: a callback function that is invoked on a successful
         // or failure to login
-        passport.authenticate('local', function(err, user, info){
+
+        const doLogin = function(err, user, info){
             if (err) {
                 return next(err);
             }
@@ -221,7 +234,35 @@ async function main() {
                 return res.redirect('/');
             })
 
-        })(req, res, next);
+        }
+
+        // passport.authenticate('local', doLogin)(req, res, next);
+
+        const  executeLogin = passport.authenticate('local', doLogin );
+        executeLogin(req, res, next);
+     })
+
+     app.get('/logout', function(req,res){
+        req.logout(function(e){
+            if (e) {
+                console.error("Error destroying session:", err);
+                return res.status(500).send('Error destroying session');
+            } else {
+                res.redirect('/login');
+            }
+        });
+     })
+
+     // if app.get or app.post has three arugments
+     // then the middle argument is the middelware to run
+     // BEFORE executing the route function
+     app.get('/profile', ensureAuthenticated, async function(req,res){
+        const user = req.user;  // app.use(passport.session()) it will
+                                // call deserializeUser if a session_id is
+                                // found in the request
+        res.render('profile', {
+            user
+        })
      })
 }
 
