@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
+const cors = require('cors');
 
 const app = express();
 
@@ -45,6 +46,19 @@ function ensureAuthenticated(req, res, next) {
     }
     // if user is not authenticated, we'll go back to the login route
     res.redirect('/login');
+}
+
+// ensureRole function will take in an array of roles
+// it will return middleware function that checks if the user has the proper role
+function ensureRole(allowedRoles) {
+    return function(req,res,next) {
+        if (req.user && allowedRoles.includes(req.user.role_name)) {
+            next();
+        } else {
+            res.status(403);
+            res.send("Forbidden. You don't have the access rights");
+        }
+    }
 }
 
 
@@ -100,8 +114,31 @@ async function main() {
     // deserialize: given an identifying information, get the user 
     // triggered when: after the user has logged in and they visit another route
     passport.deserializeUser(async function(id, done){
-        const [user] = await db.query("SELECT * FROM users WHERE id = ?", [id]);
+        const [user] = await db.query("SELECT * FROM users JOIN roles ON users.role_id = roles.id WHERE users.id = ?", [id]);
         done(null, user[0]);  // <-- save the identifyig information (2nd arugment) into the session
+    })
+
+    // API routes
+    app.get('/api/artists', async function(req,res){
+        const [artists] = await db.query("SELECT * FROM artists");
+        res.json(artists);  // another requirement of RESTFUL API -- the data is returned as JSON
+    });
+
+    // express.json middleware basically means we want to extract data from JSON payload
+    app.post('/api/artists', express.json(), async function(req,res){
+        // assume the request will contain artist name, the country, date of birth and prefered medium
+          // extract out the values of the fields
+          const {name, birth_year,country, preferred_medium} = req.body;
+
+          // write the query
+          const sql = `INSERT INTO artists (name, birth_year, country, preferred_medium) 
+                         VALUES (?,?,?,?)`;
+  
+          // execute the query on the database
+          const [results] = await db.query(sql, [name, birth_year, country, preferred_medium]);
+          res.json({
+            'insertId': results.insertId
+          })
     })
 
     // setup the routes
@@ -132,11 +169,11 @@ async function main() {
     })
 
     // render a form that allow us to add in a new artist
-    app.get('/artists/create', function(req,res){
+    app.get('/artists/create', [ensureAuthenticated, ensureRole(["admin", "manager", "staff"])], function(req,res){
         res.render('create_artist');
     })
 
-    app.post('/artists/create', async function(req,res){
+    app.post('/artists/create', [ensureAuthenticated, ensureRole(["admin", "manager", "staff"])], async function(req,res){
         // extract out the values of the fields
         const {name, birth_year,country} = req.body;
 
@@ -173,7 +210,7 @@ async function main() {
         res.redirect('/');
     });
 
-    app.get('/artists/:artist_id/delete', async function(req,res){
+    app.get('/artists/:artist_id/delete', [ensureAuthenticated, ensureRole(["admin", "manager"])], async function(req,res){
         const {artist_id} = req.params;
         const sql = "SELECT * FROM artists WHERE id = ?";
         // whenever we do a SELECT we always have an array
@@ -184,7 +221,7 @@ async function main() {
         })
      })
 
-     app.post('/artists/:artist_id/delete', async function(req,res){
+     app.post('/artists/:artist_id/delete', [ensureAuthenticated, ensureRole(["admin", "manager"])], async function(req,res){
         const {artist_id} = req.params;
         const sql = "DELETE FROM artists WHERE id = ?";
         await db.query(sql, [artist_id]);
