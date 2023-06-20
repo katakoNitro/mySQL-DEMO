@@ -2,7 +2,7 @@ const express = require('express');
 const ejs = require('ejs');
 const dotenv = require('dotenv').config();
 const mysql = require('mysql2/promise');
-
+const bcrypt = require('bcrypt');
 const app = express();
 
 //  enable static files 
@@ -117,6 +117,23 @@ async function main() {
         const sql = "DELETE FROM artists WHERE id = ?";
         await db.query(sql, [artist_id]);
         res.redirect('/');
+     });
+
+     // register a new user
+     app.get('/register', function(req,res){
+        res.render('register');
+     });
+
+     app.post('/register', async function(req,res){
+        const {username, email, password} = req.body;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const sql = "INSERT INTO users (username, password, email, role_id) VALUES (?, ?, ?, 4)";
+        await db.query(sql, [username, hashedPassword, email]);
+        res.redirect('/login');
+     })
+
+     app.get('/login', function(req,res){
+        res.render('login')
      })
 }
 
