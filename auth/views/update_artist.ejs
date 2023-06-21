@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <form method="POST">
+        <div>
+            <label>Artist Name</label>
+            <input type="text" name="name" value="<%= artist.name %>"/>
+        </div>
+        <div>
+            <label>Birth Year</label>
+            <input type="text" name="birth_year" value="<%= artist.birth_year %>"/>
+        </div>
+        <div>
+            <label>Country</label>
+            <input type="text" name="country" value="<%= artist.country %>"/>
+        </div>
+        <div>
+            <input type="radio" name="preferred_medium"
+                value="oilPainting" <%= artist.preferred_medium == "oilPainting" ? "checked" : "" %> /><label>Oil Painting</label>
+
+            <input type="radio" name="preferred_medium"
+            value="charcoal" <%= artist.preferred_medium == "charcoal" ? "checked" : "" %> /><label>Charcoal</label>
+
+            <input type="radio" name="preferred_medium"
+            value="watercolor" <%=  artist.preferred_medium =="watercolor" ? "checked" : "" %> /><label>Watercolor</label>
+        </div>
+        <input type="submit" />
+    </form>
+</body>
+
+</html>
